@@ -1,0 +1,168 @@
+0
+Back Patio
+10.1.24.196
+24:48:45:bb:57:e9
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+1
+EXT Fence Ditch Witch
+10.1.24.131
+24:48:45:bb:58:51
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+2
+EXT Front East
+10.1.24.49
+3c:1b:f8:99:8f:c3
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+3
+EXT Side Left
+10.1.24.98
+3c:1b:f8:99:8f:f4
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+4
+Inside Sales Office
+10.1.24.80
+24:48:45:bb:57:75
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+5
+Outside Sales Office
+10.1.24.171
+24:48:45:bb:57:d0
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+6
+Sales Conference Room
+10.1.24.167
+24:48:45:bb:57:c8
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+7
+Tier 1 Left
+10.1.24.164
+24:48:45:bb:57:c9
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+8
+Tier 1 Right
+10.1.24.165
+14:2f:fd:58:3f:de
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+9
+Tier 2
+10.1.24.181
+24:48:45:b9:b9:2a
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+10
+Projects
+10.1.24.166
+24:48:45:ba:2f:19
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+11
+North Conference Room
+10.1.24.64
+24:48:45:bb:58:0e
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+12
+South Conference Room
+10.1.24.186
+24:48:45:b9:b9:2f
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+13
+Warehouse Rec Area
+10.1.24.180
+24:48:45:b9:b9:29
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+14
+Parts/Inventory
+10.1.24.37
+24:48:45:bb:57:4a
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+15
+Lean-to
+10.1.24.177
+ac:cb:51:5f:cd:c8
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+16
+Upstairs Break Room
+10.1.24.81
+24:48:45:bb:58:1f
+admin
+Applied96
+/Streaming/Channels/101/1/
+/Streaming/Channels/101/2/
+17
+Lobby
+10.1.24.22
+24:48:45:bb:57:fa
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+18
+Projects Storage
+10.1.24.79
+24:48:45:bb:57:74
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+19
+Sales Hallway
+10.1.24.113
+24:48:45:bb:58:3f
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2
+20
+Kitchen Hall
+10.1.24.88
+24:48:45:bb:57:7d
+admin
+Applied96
+/Streaming/Channels/101/1
+/Streaming/Channels/101/2

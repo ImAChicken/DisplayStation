@@ -1,0 +1,23 @@
+# ========================================== 
+# DisplayStation Settings File 
+# ========================================== 
+
+# Layout file inside customLayouts/ 
+LAYOUT_FILE=7x7test.txt
+
+# Last known display resolution 
+DISPLAY_WIDTH=1366
+DISPLAY_HEIGHT=768
+
+# Auto reboot timer (examples: 30m, 2h, 4h) 
+# (This determines how long a camera stream will be played before rebooting. Stream reboot should be near seemless except a slight stutter. Anything less than 20 seconds will result in exteme performance issues.) 
+REBOOT_TIMER=2h
+
+# Run mode 
+# 1 = run indefinitely 
+# 0 = test mode (camera stream iterates 5 times) 
+RUN_INDEFINITE=1
+
+# Restart time (examples: 20:00, 09:45) 
+# The Displaystation will restart the system daily as long as it is configured to open upon boot. 
+RESTART_TIME=20:00
