@@ -3,7 +3,7 @@
 # ========================================== 
 
 # Layout file inside customLayouts/ 
-LAYOUT_FILE=7x7test.txt
+LAYOUT_FILE=13testLayout.txt
 
 # Last known display resolution 
 DISPLAY_WIDTH=1366
