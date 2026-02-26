@@ -4,7 +4,8 @@ echo "======================================"
 echo "DisplayStation v1 Installer Starting"
 echo "======================================"
 
-BASE_DIR="$HOME/DisplayStationv8"
+# Make BASE_DIR wherever this script is located
+BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # -----------------------------
 # 1️⃣ Install Dependencies
