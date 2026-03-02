@@ -39,6 +39,18 @@ set -euo pipefail
 #END update the RTSP files in case IP settings have changed. 
 ########################################################################################################################################
 
+#Popup error handler ###################################################################################################################
+	ShowErrorAndExit () {
+	    yad --error \
+		--center \
+		--title="DisplayStation Error" \
+		--text="$1" \
+		--button=OK:0
+
+	    echo "ERROR: $1"
+	    exit 1
+	}
+#END Popup error handler ###############################################################################################################
 
 #read the RTSP.txt file and load it into the rtsp array variable ########################################################################################################################################
 	echo "Loading RTSP streams from RTSP1.txt into rtsp[] arrays:"
@@ -81,6 +93,11 @@ set -euo pipefail
 	    echo "${rtspSub[$i]}"
 	done
 	echo " "
+	
+	# Fail if RTSP1.txt is empty
+	if [ ! -s "RTSP1.txt" ] || [ "$rtspIndexLength" -eq 0 ]; then
+	    ShowErrorAndExit "RTSP1.txt is empty.\n\nNo cameras are configured."
+	fi
 #END read the RTSP.txt file and load it into the rtsp array variable ####################################################################################################################################
 
 
@@ -101,7 +118,17 @@ set -euo pipefail
 	fi
 
 	# Assign program variables
+	
 	layoutFile="customLayouts/$LAYOUT_FILE"
+	# Fail if no layout selected
+	if [ "$LAYOUT_FILE" = "null" ] || [ -z "$LAYOUT_FILE" ]; then
+	    ShowErrorAndExit "No layout file is selected.\n\nPlease select a layout before starting DisplayStation."
+	fi
+	# Fail if layout file does not exist
+	if [ ! -f "$layoutFile" ]; then
+	    ShowErrorAndExit "Selected layout file does not exist:\n\n$layoutFile\n\nPlease select a valid layout."
+	fi
+
 	displayWidth=$DISPLAY_WIDTH
 	displayHeight=$DISPLAY_HEIGHT
 	runtimeBeforeLoop="$REBOOT_TIMER"

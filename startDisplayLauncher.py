@@ -15,7 +15,8 @@ START_DISPLAY_SCRIPT = os.path.join(BASE_DIR, "DisplayStation.sh")
 NEW_LAYOUT_SCRIPT = os.path.join(BASE_DIR, "createLayout1.py")
 SET_LAYOUT_SCRIPT = os.path.join(BASE_DIR, "changeLayout.py")
 CAMERA_MANAGER_SCRIPT = os.path.join(BASE_DIR, "rtsp1_camera_manager.py")
-EDIT_SETTINGS_SCRIPT = os.path.join(BASE_DIR, "editSettings.py")  # <- new
+EDIT_SETTINGS_SCRIPT = os.path.join(BASE_DIR, "editSettings.py") 
+RESTORE_DEFAULTS_SCRIPT = os.path.join(BASE_DIR, "restoreDefaults.py")
 
 class DisplayLauncher(tk.Tk):
     def __init__(self):
@@ -78,6 +79,12 @@ class DisplayLauncher(tk.Tk):
             command=self.edit_settings
         ).pack(fill="x", pady=5)
 
+        ttk.Button(
+            frame,
+            text="Restore Defaults",
+            command=self.restore_defaults
+        ).pack(fill="x", pady=5)
+
     # =========================
     # Launch Helpers
     # =========================
@@ -137,6 +144,15 @@ class DisplayLauncher(tk.Tk):
             [sys.executable, EDIT_SETTINGS_SCRIPT],
             "editSettings.py"
         )
+
+    def restore_defaults(self):
+        print("Opening Restore Defaults...")
+        self.launch_script(
+            [sys.executable, RESTORE_DEFAULTS_SCRIPT],
+            "restoreDefaults.py"
+        )
+
+    
 
 
 if __name__ == "__main__":
