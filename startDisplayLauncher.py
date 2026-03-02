@@ -17,13 +17,14 @@ SET_LAYOUT_SCRIPT = os.path.join(BASE_DIR, "changeLayout.py")
 CAMERA_MANAGER_SCRIPT = os.path.join(BASE_DIR, "rtsp1_camera_manager.py")
 EDIT_SETTINGS_SCRIPT = os.path.join(BASE_DIR, "editSettings.py") 
 RESTORE_DEFAULTS_SCRIPT = os.path.join(BASE_DIR, "restoreDefaults.py")
+UPDATE_SCRIPT = os.path.join(BASE_DIR, "update.sh")
 
 class DisplayLauncher(tk.Tk):
     def __init__(self):
         super().__init__()
 
         self.title("DisplayStation Launcher")
-        self.geometry("350x300")  # slightly taller to fit new button
+        self.geometry("350x350")  # slightly taller to fit new button
         self.resizable(False, False)
 
         icon_path = os.path.join(BASE_DIR, "icon_tk.png")
@@ -70,9 +71,6 @@ class DisplayLauncher(tk.Tk):
             command=self.open_camera_manager
         ).pack(fill="x", pady=5)
 
-        # =========================
-        # New Button for Edit Settings
-        # =========================
         ttk.Button(
             frame,
             text="Edit SETTINGS.txt",
@@ -83,6 +81,12 @@ class DisplayLauncher(tk.Tk):
             frame,
             text="Restore Defaults",
             command=self.restore_defaults
+        ).pack(fill="x", pady=5)
+
+        ttk.Button(
+            frame,
+            text="Check for Updates",
+            command=self.check_updates
         ).pack(fill="x", pady=5)
 
     # =========================
@@ -150,6 +154,13 @@ class DisplayLauncher(tk.Tk):
         self.launch_script(
             [sys.executable, RESTORE_DEFAULTS_SCRIPT],
             "restoreDefaults.py"
+        )
+
+    def check_updates(self):
+        print("Checking for updates...")
+        self.launch_script(
+            [UPDATE_SCRIPT],
+            "update.sh"
         )
 
     
