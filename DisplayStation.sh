@@ -469,7 +469,7 @@ if [ $passedInitialization -eq 1 ]; then
 		
 		OpenDisplay #open a new instance of the displays
 		
-		sleep 5s #wait 5s before killing old screens
+		sleep 15s #wait 15s before killing old screens
 		
 		for ((j=0; j<$numberOfPids; j++)); do
 			kill ${pidArray[$j]} #kill all the old screens
