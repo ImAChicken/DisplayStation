@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import subprocess
 import webbrowser
+from pathlib import Path
 
 # -------------------------------
 # File paths and commands
@@ -67,20 +68,26 @@ def load_rtsp1():
 # -------------------------------
 # Load ONVIF scan results
 # -------------------------------
-def load_onvif():
-    """Loads cameras from onvifScan.txt into a dictionary keyed by (IP, MAC)"""
+def load_onvif(path=ONVIF_FILE, source="local"):
+    """Loads cameras from a scan file into a dictionary keyed by (IP, MAC)."""
     cams = {}
     try:
-        with open(ONVIF_FILE, "r") as f:
+        with open(path, "r") as f:
             for line in f:
                 parts = line.strip().split()
                 if len(parts) != 4:
                     continue
                 ip, mac, xaddr, status = parts
-                cams[(ip, mac)] = {"xaddr": xaddr, "status": status}
+                cams[(ip, mac)] = {"xaddr": xaddr, "status": status, "source": source}
     except FileNotFoundError:
         pass
     return cams
+
+
+def subnet_output_name(subnet):
+    """10.1.24.0/24 -> onvifScan_10.1.24.0_24.txt"""
+    safe = subnet.strip().replace("/", "_").replace(" ", "")
+    return f"onvifScan_{safe}.txt"
 
 # -------------------------------
 # Main Application Class
@@ -154,6 +161,7 @@ class CameraManager(tk.Tk):
         self.onvif_tree.pack(fill="both", expand=True)
 
         self.onvif_tree.tag_configure("bad", background="#f7c5c5")  # Red for bad XADDR
+        self.onvif_tree.tag_configure("subnet", background="#BBDEFB")  # Blue for subnet scan hits
 
         # Buttons below ONVIF table
         onvif_btns = ttk.Frame(self.onvif_frame)
@@ -164,7 +172,8 @@ class CameraManager(tk.Tk):
         ttk.Button(onvif_btns, text="Test Ping", command=self.test_ping_onvif).pack(side="left", padx=5)
         ttk.Button(onvif_btns, text="Open HTTP", command=self.open_http_onvif).pack(side="left", padx=5)
 
-        # Green scan button
+        # Green local scan, then the subnet scan to its left.
+        # Packed right-to-left so the subnet button sits left of the text box.
         run_btn = tk.Button(
             onvif_btns,
             text="Run Network Scan",
@@ -174,6 +183,22 @@ class CameraManager(tk.Tk):
             command=self.run_network_scan_button
         )
         run_btn.pack(side="right", padx=10)
+
+        self.subnet_var = tk.StringVar(value="10.1.24.0/24")
+        subnet_entry = tk.Entry(onvif_btns, textvariable=self.subnet_var, width=18)
+        subnet_entry.pack(side="right", padx=5)
+
+        self.subnet_btn = tk.Button(
+            onvif_btns,
+            text="Run Scan on Subnet",
+            bg="#1976D2",
+            fg="white",
+            activebackground="#1565C0",
+            activeforeground="white",
+            font=("TkDefaultFont", 10, "bold"),
+            command=self.run_subnet_scan_button
+        )
+        self.subnet_btn.pack(side="right", padx=5)
 
     # -------------------------------
     # Populate the tables
@@ -185,7 +210,10 @@ class CameraManager(tk.Tk):
                 tree.delete(row)
 
         self.rtsp_cameras = load_rtsp1()
-        self.onvif_cameras = load_onvif()
+        self.onvif_cameras = load_onvif(ONVIF_FILE, "local")
+        for name in sorted(Path(".").glob("onvifScan_*.txt")):
+            for key, data in load_onvif(name, "subnet").items():
+                self.onvif_cameras.setdefault(key, data)
 
         # Populate Current Cameras table
         for cam in self.rtsp_cameras:
@@ -226,8 +254,15 @@ class CameraManager(tk.Tk):
 
         # Insert NEW cameras first
         for ip, mac, data in new_cams:
-            tag = "bad" if data["status"] == "0" else ""
-            status = "Bad XADDR URL - may not be a valid camera" if data["status"] == "0" else "Valid XADDR URL"
+            if data.get("source") == "subnet":
+                tag = "subnet"
+                status = "Subnet scan"
+            elif data["status"] == "0":
+                tag = "bad"
+                status = "Bad XADDR URL - may not be a valid camera"
+            else:
+                tag = ""
+                status = "Valid XADDR URL"
             self.onvif_tree.insert("", "end", values=(ip, mac, data["xaddr"], status), tags=(tag,))
 
         # Insert ALREADY-ADDED cameras last with green background
@@ -553,6 +588,23 @@ class CameraManager(tk.Tk):
         if run_network_scan():
             self.refresh_tables()
 
+    def run_subnet_scan_button(self):
+        subnet = self.subnet_var.get().strip()
+        if not subnet or "/" not in subnet:
+            messagebox.showerror("Subnet Scan", "Enter a subnet like 10.1.24.0/24")
+            return
+        out_file = subnet_output_name(subnet)
+        self.subnet_btn.config(text="Scanning...", state="disabled")
+        self.update_idletasks()
+        try:
+            subprocess.run(["bash", "scripts/discoverCameras.sh", out_file, subnet], check=True)
+        except subprocess.CalledProcessError as exc:
+            messagebox.showerror("Subnet Scan Failed", f"Scan of {subnet} failed.\n\n{exc}")
+            return
+        finally:
+            self.subnet_btn.config(text="Run Scan on Subnet", state="normal")
+        self.refresh_tables()
+
     # -------------------------------
     # Add Camera window logic (unchanged)
     # -------------------------------
@@ -580,8 +632,7 @@ class CameraManager(tk.Tk):
         ttk.Label(info_tab, text="MAC Address").grid(row=2, column=0, sticky="w", pady=5)
         mac_entry = ttk.Entry(info_tab, width=30)
         mac_entry.grid(row=2, column=1, pady=5)
-        if mac:
-            mac_entry.insert(0, mac)
+        mac_entry.insert(0, mac if mac else "UNKNOWN")
 
         # Example MAC format
         ttk.Label(info_tab, text="Example: 00:1a:2b:3c:4d:5e", foreground="gray").grid(row=3, column=1, sticky="w", padx=2)
