@@ -11,7 +11,12 @@ fi
 
 TMP_FILE="$(mktemp)"
 
-# --- Step 1: Read onvifScan.txt into associative arrays ---
+is_real_mac() {
+    local value="${1^^}"
+    [[ -n "$value" && "$value" != "UNKNOWN" && "$value" =~ ^([0-9A-F]{2}:){5}[0-9A-F]{2}$ ]]
+}
+
+# --- Step 1: Read onvifScan.txt. Ignore UNKNOWN so it cannot replace a saved MAC. ---
 declare -A mac_to_ip
 declare -A ip_to_mac
 
@@ -19,12 +24,10 @@ while read -r line; do
     [[ -z "$line" ]] && continue
     ip=$(echo "$line" | awk '{print $1}')
     mac=$(echo "$line" | awk '{print $2}')
-    # Only IPv4
     if [[ "$ip" == *:* ]]; then
         continue
     fi
-    # Only add if MAC is non-empty
-    if [[ -n "$mac" ]]; then
+    if is_real_mac "$mac"; then
         mac_to_ip["$mac"]="$ip"
         ip_to_mac["$ip"]="$mac"
     fi
@@ -40,8 +43,8 @@ while IFS= read -r line || [[ -n "$line" ]]; do
         ip="${block[2]}"
         mac="${block[3]}"
 
-        # --- Step 2a: Update IP if MAC exists and IP changed ---
-        if [[ -n "$mac" && -n "${mac_to_ip[$mac]}" ]]; then
+        # Update IP only when the saved MAC is real and the scan saw that same MAC.
+        if is_real_mac "$mac" && [[ -n "${mac_to_ip[$mac]}" ]]; then
             new_ip="${mac_to_ip[$mac]}"
             if [[ "$ip" != "$new_ip" ]]; then
                 echo "[*] Updating IP for $name ($mac) $ip → $new_ip"
@@ -50,34 +53,20 @@ while IFS= read -r line || [[ -n "$line" ]]; do
             fi
         fi
 
-        # --- Step 2b: Check for replaced cameras (IP matches, MAC mismatch) ---
-        if [[ -n "$ip" && -n "${ip_to_mac[$ip]}" ]]; then
-            expected_mac="${ip_to_mac[$ip]}"
-            if [[ "$mac" != "$expected_mac" ]]; then
-                echo "[*] Detected replaced camera at IP $ip ($mac → $expected_mac)"
-                mac="$expected_mac"
-                block[3]="$mac"
-            fi
-        fi
-
-        # --- Step 2c: Fill missing MAC if IP exists in onvifScan ---
-        if [[ -z "$mac" && -n "$ip" && -n "${ip_to_mac[$ip]}" ]]; then
+        # Fill a missing MAC only. Never replace a real saved MAC.
+        if ! is_real_mac "$mac" && [[ -n "$ip" && -n "${ip_to_mac[$ip]}" ]]; then
             mac="${ip_to_mac[$ip]}"
             echo "[*] Filling missing MAC for $name at IP $ip → $mac"
             block[3]="$mac"
         fi
 
-        # Write updated block to temp file
         for i in "${block[@]}"; do
             echo "$i"
         done >> "$TMP_FILE"
 
-        # Reset block for next camera
         block=()
     fi
 done < "$RTSP_FILE"
 
-# Replace original file
 mv "$TMP_FILE" "$RTSP_FILE"
 echo "[✓] RTSP1.txt updated from onvifScan.txt"
-
