@@ -11,7 +11,9 @@ mkdir -p "$(dirname "$OUT")"
 > "$OUT"
 
 echo "[*] Installing ONVIF discovery dependencies..."
-python3 -m pip install --user --quiet wsdiscovery onvif-zeep
+python3 - << 'PY' || python3 -m pip install --user --break-system-packages wsdiscovery onvif-zeep
+import wsdiscovery, onvif
+PY
 
 echo "[*] Discovering ONVIF devices (IPv4 only)..."
 
