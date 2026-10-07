@@ -7,7 +7,7 @@ set -euo pipefail
 
 # Define repo and target directory
 REPO_URL="https://github.com/ImAChicken/DisplayStation.git"
-TARGET_DIR="$HOME/DisplayStationv8"
+TARGET_DIR="$HOME/DisplayStation"
 
 echo "Starting DisplayStation installation..."
 echo "Target directory: $TARGET_DIR"
