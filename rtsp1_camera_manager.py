@@ -134,6 +134,7 @@ class CameraManager(tk.Tk):
         # Row coloring
         self.rtsp_tree.tag_configure("online", background="#c8f7c5")
         self.rtsp_tree.tag_configure("offline", background="#f7c5c5")  # Red for offline
+        self.rtsp_tree.tag_configure("subnet", background="#0D47A1", foreground="white")
 
         # Buttons below RTSP1 table
         rtsp_btns = ttk.Frame(self.rtsp_frame)
@@ -161,7 +162,8 @@ class CameraManager(tk.Tk):
         self.onvif_tree.pack(fill="both", expand=True)
 
         self.onvif_tree.tag_configure("bad", background="#f7c5c5")  # Red for bad XADDR
-        self.onvif_tree.tag_configure("subnet", background="#BBDEFB")  # Blue for subnet scan hits
+        self.onvif_tree.tag_configure("subnet", background="#0D47A1", foreground="white")
+        self.onvif_tree.tag_configure("both", background="#90CAF9", foreground="black")
 
         # Buttons below ONVIF table
         onvif_btns = ttk.Frame(self.onvif_frame)
@@ -200,6 +202,18 @@ class CameraManager(tk.Tk):
         )
         self.subnet_btn.pack(side="right", padx=5)
 
+        self.mac_btn = tk.Button(
+            onvif_btns,
+            text="Query Unknown MACs",
+            bg="#1976D2",
+            fg="white",
+            activebackground="#1565C0",
+            activeforeground="white",
+            font=("TkDefaultFont", 10, "bold"),
+            command=self.query_unknown_macs_button
+        )
+        self.mac_btn.pack(side="right", padx=5)
+
     # -------------------------------
     # Populate the tables
     # -------------------------------
@@ -216,11 +230,21 @@ class CameraManager(tk.Tk):
                 self.onvif_cameras.setdefault(key, data)
 
         # Populate Current Cameras table
+        subnet_by_ip = {
+            ip: data
+            for (ip, _mac), data in self.onvif_cameras.items()
+            if data.get("source") == "subnet"
+        }
         for cam in self.rtsp_cameras:
             key = (cam["ip"], cam["mac"])
             onvif = self.onvif_cameras.get(key)
+            subnet_hit = subnet_by_ip.get(cam["ip"])
 
-            if onvif:
+            if subnet_hit:
+                tag = "subnet"
+                status = "Subnet scan"
+                xaddr = subnet_hit["xaddr"]
+            elif onvif:
                 tag = "online"
                 status = "Good"
                 xaddr = onvif["xaddr"]
@@ -243,11 +267,12 @@ class CameraManager(tk.Tk):
         # Populate ONVIF table with already added cameras at the bottom
         # -------------------------------
         existing_rtsp = {(c["ip"], c["mac"]) for c in self.rtsp_cameras}
+        existing_ips = {c["ip"] for c in self.rtsp_cameras}
         new_cams = []
         added_cams = []
 
         for (ip, mac), data in self.onvif_cameras.items():
-            if (ip, mac) in existing_rtsp:
+            if (ip, mac) in existing_rtsp or ip in existing_ips:
                 added_cams.append((ip, mac, data))
             else:
                 new_cams.append((ip, mac, data))
@@ -265,9 +290,9 @@ class CameraManager(tk.Tk):
                 status = "Valid XADDR URL"
             self.onvif_tree.insert("", "end", values=(ip, mac, data["xaddr"], status), tags=(tag,))
 
-        # Insert ALREADY-ADDED cameras last with green background
+        # Cameras that are also in the top list are lighter blue.
         for ip, mac, data in added_cams:
-            self.onvif_tree.insert("", "end", values=(ip, mac, data["xaddr"], "Already Added"), tags=("added",))
+            self.onvif_tree.insert("", "end", values=(ip, mac, data["xaddr"], "Already Added"), tags=("both",))
 
     # -------------------------------
     # RTSP button methods (with debug prints)
@@ -605,13 +630,117 @@ class CameraManager(tk.Tk):
             self.subnet_btn.config(text="Run Scan on Subnet", state="normal")
         self.refresh_tables()
 
+    def query_unknown_macs_button(self):
+        """Fill UNKNOWN MACs on added cameras and on the bottom scan list."""
+        import re
+        import ssl
+        import urllib.request
+        from urllib.request import HTTPDigestAuthHandler, HTTPPasswordMgrWithDefaultRealm, build_opener
+
+        mac_re = re.compile(r"([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}")
+        default_user, default_pwd = "admin", "Applied96"
+        cameras = [c for c in load_rtsp1() if c["mac"].strip().upper() in ("", "UNKNOWN")]
+        scan_files = [Path(ONVIF_FILE), *sorted(Path(".").glob("onvifScan_*.txt"))]
+        bottom = []
+        for scan in scan_files:
+            if not scan.exists():
+                continue
+            for line in scan.read_text().splitlines():
+                parts = line.split()
+                if len(parts) == 4 and parts[1].strip().upper() in ("", "UNKNOWN"):
+                    bottom.append((scan, parts[0]))
+
+        if not cameras and not bottom:
+            messagebox.showinfo("Query Unknown MACs", "No UNKNOWN MACs in the added cameras or the scan list.")
+            return
+
+        self.mac_btn.config(text="Querying...", state="disabled")
+        self.update_idletasks()
+        updated = []
+        missed = []
+
+        def fetch(url, user, pwd):
+            password_mgr = HTTPPasswordMgrWithDefaultRealm()
+            password_mgr.add_password(None, url, user, pwd)
+            opener = build_opener(HTTPDigestAuthHandler(password_mgr))
+            opener.addheaders = [("User-Agent", "DisplayStation")]
+            context = ssl._create_unverified_context()
+            try:
+                with opener.open(url, timeout=4) as response:
+                    return response.read().decode("utf-8", "replace")
+            except Exception:
+                try:
+                    request = urllib.request.Request(url)
+                    token = urllib.request.HTTPBasicAuthHandler(password_mgr)
+                    basic = build_opener(token, urllib.request.HTTPSHandler(context=context))
+                    with basic.open(request, timeout=4) as response:
+                        return response.read().decode("utf-8", "replace")
+                except Exception:
+                    return ""
+
+        def mac_from_ip(ip, user, pwd):
+            for url in (
+                f"http://{ip}/ISAPI/System/Network/interfaces",
+                f"https://{ip}/ISAPI/System/Network/interfaces",
+            ):
+                match = mac_re.search(fetch(url, user, pwd))
+                if match:
+                    return match.group(0).lower()
+            return ""
+
+        try:
+            for cam in cameras:
+                found = mac_from_ip(cam["ip"], cam["user"], cam["pwd"])
+                if found:
+                    updated.append(cam["name"] or cam["ip"])
+                    with open(RTSP1_FILE, "r") as handle:
+                        lines = handle.readlines()
+                    for i in range(0, len(lines), 8):
+                        if lines[i].strip() == str(cam["index"]):
+                            lines[i + 3] = found + "\n"
+                            break
+                    with open(RTSP1_FILE, "w") as handle:
+                        handle.writelines(lines)
+                else:
+                    missed.append(cam["name"] or cam["ip"])
+
+            seen = set()
+            for scan, ip in bottom:
+                if ip in seen:
+                    continue
+                seen.add(ip)
+                found = mac_from_ip(ip, default_user, default_pwd)
+                if not found:
+                    missed.append(ip)
+                    continue
+                updated.append(ip)
+                for scan_file in scan_files:
+                    if not scan_file.exists():
+                        continue
+                    new_lines = []
+                    for line in scan_file.read_text().splitlines():
+                        parts = line.split()
+                        if len(parts) == 4 and parts[0] == ip and parts[1].upper() in ("", "UNKNOWN"):
+                            parts[1] = found
+                            line = " ".join(parts)
+                        new_lines.append(line)
+                    scan_file.write_text("\n".join(new_lines) + "\n")
+        finally:
+            self.mac_btn.config(text="Query Unknown MACs", state="normal")
+
+        self.refresh_tables()
+        message = f"Updated {len(updated)} camera(s)."
+        if missed:
+            message += "\nNo MAC returned for: " + ", ".join(missed)
+        messagebox.showinfo("Query Unknown MACs", message)
+
     # -------------------------------
     # Add Camera window logic (unchanged)
     # -------------------------------
     def open_add_camera_window(self, ip=None, mac=None):
         win = tk.Toplevel(self)
         win.title("Add Camera")
-        win.geometry("520x440")
+        win.geometry("520x520")
         win.resizable(False, False)
 
         notebook = ttk.Notebook(win)
@@ -649,6 +778,54 @@ class CameraManager(tk.Tk):
         ttk.Label(info_tab, text="Password").grid(row=6, column=0, sticky="w", pady=5)
         pwd_entry = ttk.Entry(info_tab, width=30, show="*")
         pwd_entry.grid(row=6, column=1, pady=5)
+
+        existing = load_rtsp1()
+        if existing:
+            use_existing = tk.BooleanVar(value=False)
+            copy_label = ttk.Label(info_tab, text="Copy password from camera:")
+            copy_box = ttk.Combobox(
+                info_tab,
+                state="disabled",
+                width=28,
+                values=[f"{c['index']}: {c['name']}" for c in existing],
+            )
+
+            def apply_copy(_event=None):
+                selected = copy_box.get()
+                if not selected:
+                    return
+                idx = int(selected.split(":", 1)[0])
+                cam = next(c for c in existing if c["index"] == idx)
+                user_entry.config(state="normal")
+                pwd_entry.config(state="normal")
+                user_entry.delete(0, tk.END)
+                pwd_entry.delete(0, tk.END)
+                user_entry.insert(0, cam["user"])
+                pwd_entry.insert(0, cam["pwd"])
+                user_entry.config(state="disabled")
+                pwd_entry.config(state="disabled")
+
+            def toggle_copy():
+                if use_existing.get():
+                    user_entry.config(state="disabled")
+                    pwd_entry.config(state="disabled")
+                    copy_box.config(state="readonly")
+                    if copy_box.get():
+                        apply_copy()
+                else:
+                    user_entry.config(state="normal")
+                    pwd_entry.config(state="normal")
+                    copy_box.config(state="disabled")
+
+            ttk.Checkbutton(
+                info_tab,
+                text="Use existing password",
+                variable=use_existing,
+                command=toggle_copy,
+            ).grid(row=7, column=1, sticky="w", pady=5)
+            copy_label.grid(row=8, column=0, sticky="w", pady=5)
+            copy_box.grid(row=8, column=1, pady=5)
+            copy_box.bind("<<ComboboxSelected>>", apply_copy)
 
         stream_tab = ttk.Frame(notebook)
         notebook.add(stream_tab, text="Streams")
