@@ -69,7 +69,19 @@ done < "$RTSP_FILE"
 
 mv "$TMP_FILE" "$RTSP_FILE"
 
-# --- Step 3: Cameras the local scan did not see. Match the saved MAC on subnet scan hosts. ---
+# --- Step 3: Refresh every subnet the user has already scanned, then match saved MACs. ---
+# Opening DisplayStation runs this file, so a saved subnet does not depend on button order.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+for scan_file in onvifScan_*.txt; do
+    [[ -e "$scan_file" ]] || continue
+    subnet="${scan_file#onvifScan_}"
+    subnet="${subnet%.txt}"
+    subnet="${subnet/_//}"
+    echo "[*] Refreshing subnet $subnet"
+    bash "$SCRIPT_DIR/discoverCameras.sh" "$scan_file" "$subnet" || echo "[!] Subnet refresh failed for $subnet"
+done
+
+# --- Step 4: Cameras the local scan did not see. Match the saved MAC on those refreshed hosts. ---
 python3 - "$RTSP_FILE" "$ONVIF_FILE" << 'PY'
 import pathlib
 import re
