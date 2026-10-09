@@ -62,6 +62,25 @@ if dpkg -l | grep -q unattended-upgrades; then
     sudo systemctl stop unattended-upgrades 2>/dev/null
 fi
 
+# Stop the Software Updater window from launching itself.
+mkdir -p "$HOME/.config/autostart"
+cat > "$HOME/.config/autostart/update-notifier.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Update Notifier
+Hidden=true
+X-GNOME-Autostart-enabled=false
+EOF
+
+gsettings set org.gnome.software download-updates false 2>/dev/null || true
+gsettings set org.gnome.software allow-updates false 2>/dev/null || true
+gsettings set com.ubuntu.update-notifier no-show-notifications true 2>/dev/null || true
+
+sudo tee /etc/apt/apt.conf.d/20auto-upgrades > /dev/null <<EOF
+APT::Periodic::Update-Package-Lists "0";
+APT::Periodic::Unattended-Upgrade "0";
+EOF
+
 echo "Automatic updates fully disabled."
 echo ""
 
