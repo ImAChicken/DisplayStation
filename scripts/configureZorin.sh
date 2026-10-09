@@ -15,8 +15,11 @@ CURRENT_USER=$(whoami)
 echo ""
 echo "[1/6] Configuring Panel..."
 
-gsettings set org.gnome.shell.extensions.zorin-taskbar intellihide true 2>/dev/null
-gsettings set org.gnome.shell.extensions.zorin-taskbar intellihide-mode 'ALL_WINDOWS' 2>/dev/null
+# Hide from every window, and only when a window actually overlaps the panel.
+# Zorin 18 uses intellihide-behaviour, not intellihide-mode.
+gsettings set org.gnome.shell.extensions.zorin-taskbar intellihide true
+gsettings set org.gnome.shell.extensions.zorin-taskbar intellihide-behaviour 'ALL_WINDOWS'
+gsettings set org.gnome.shell.extensions.zorin-taskbar intellihide-hide-from-windows true
 
 echo "Panel configured."
 echo ""
